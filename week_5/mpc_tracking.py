@@ -34,7 +34,7 @@ def print_joint_info(sim, dyn_model, controlled_frame_name):
     print(f"Joint velocity limits: {joint_vel_limits}")
     
 
-def getSystemMatrices(sim, num_joints, damping_coefficients=None):
+def getSystemMatricesContinuos(num_joints, damping_coefficients=None):
     """
     Get the system matrices A and B according to the dimensions of the state and control input.
     
@@ -50,24 +50,23 @@ def getSystemMatrices(sim, num_joints, damping_coefficients=None):
     num_states = 2 * num_joints
     num_controls = num_joints
     
-    time_step = sim.GetTimeStep()
     
     # Initialize A matrix
-    A = np.eye(num_states)
+    A = np.zeros((num_states,num_states))
     
     # Upper right quadrant of A (position affected by velocity)
-    A[:num_joints, num_joints:] = np.eye(num_joints) * time_step
+    A[:num_joints, num_joints:] = np.eye(num_joints) 
     
     # Lower right quadrant of A (velocity affected by damping)
-    if damping_coefficients is not None:
-        damping_matrix = np.diag(damping_coefficients)
-        A[num_joints:, num_joints:] = np.eye(num_joints) - time_step * damping_matrix
+    #if damping_coefficients is not None:
+    #    damping_matrix = np.diag(damping_coefficients)
+    #    A[num_joints:, num_joints:] = np.eye(num_joints) - time_step * damping_matrix
     
     # Initialize B matrix
     B = np.zeros((num_states, num_controls))
     
     # Lower half of B (control input affects velocity)
-    B[num_joints:, :] = np.eye(num_controls) * time_step
+    B[num_joints:, :] = np.eye(num_controls) 
     
     return A, B
 
@@ -91,7 +90,7 @@ def getCostMatrices(num_joints):
     
     # Q = 1 * np.eye(num_states)  # State cost matrix
     Q = 10000 * np.eye(num_states)
-    Q[num_joints:, num_joints:] = 0.0
+    #Q[num_joints:, num_joints:] = 0.0
     
     R = 0.1 * np.eye(num_controls)  # Control input cost matrix
     
@@ -115,7 +114,7 @@ def main():
     regressor_all = np.array([])
 
     # Define the matrices
-    A, B = getSystemMatrices(sim, num_joints)
+    A, B = getSystemMatricesContinuos(num_joints)
     Q, R = getCostMatrices(num_joints)
     
     # Measuring all the state
@@ -126,7 +125,7 @@ def main():
     N_mpc = 10
 
     # Initialize the regulator model
-    tracker = TrackerModel(A, B, C, Q, R, N_mpc, num_states, num_joints, num_states)
+    tracker = TrackerModel(A, B, C, Q, R, N_mpc, num_states, num_joints, num_states, sim.GetTimeStep())
     # Compute the matrices needed for MPC optimization
     S_bar, S_bar_C, T_bar, T_bar_C, Q_hat, Q_bar, R_bar = tracker.propagation_model_tracker_fixed_std()
     H,Ftra = tracker.tracker_std(S_bar, T_bar, Q_hat, Q_bar, R_bar)
@@ -166,8 +165,7 @@ def main():
         # generate the predictive trajectory for N steps
         for j in range(N_mpc):
             q_d, qd_d = ref.get_values(current_time + j*time_step)
-            q_d_all.append(q_d)
-            qd_d_all.append(qd_d)
+            
             # here i need to stack the q_d and qd_d
             x_ref.append(np.vstack((q_d.reshape(-1, 1), qd_d.reshape(-1, 1))))
         
@@ -195,6 +193,11 @@ def main():
         # Store data for plotting
         q_mes_all.append(q_mes)
         qd_mes_all.append(qd_mes)
+
+        q_d, qd_d = ref.get_values(current_time)
+
+        q_d_all.append(q_d)
+        qd_d_all.append(qd_d)
 
         # time.sleep(0.01)  # Slow down the loop for better visualization
         # get real time

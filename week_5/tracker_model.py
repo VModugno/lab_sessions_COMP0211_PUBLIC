@@ -2,16 +2,44 @@ import numpy as np
 from scipy.optimize import minimize
 
 class TrackerModel:
-    def __init__(self, A, B, C, Q, R, N, q, m, n):
-        self.A = A
-        self.B = B
-        self.C = C
+    def __init__(self, A_continuos, B_continuos, C_continuos, Q, R, N, q, m, n, delta):
+        A_cont = A_continuos
+        B_cont = B_continuos
+        C_cont = C_continuos
         self.Q = Q
         self.R = R
         self.N = N # prediction horizon
         self.q = q # number of outputs  
         self.m = m # Number of control inputs
-        self.n = n # Number of states
+        self.orig_n = n # Number of states#
+        self.delta = delta
+
+        # Compute matrix A
+        A_upper_left = np.eye(self.orig_n) + self.delta * A_cont
+        A_upper_right = self.delta * B_cont
+        A_lower_left = np.zeros((self.m, self.orig_n))
+        A_lower_right = np.eye(self.m)
+
+        # Combine blocks to form A
+        A_upper = np.hstack((A_upper_left, A_upper_right))
+        A_lower = np.hstack((A_lower_left, A_lower_right))
+        A = np.vstack((A_upper, A_lower))
+
+        # Alternatively, using np.block for clarity
+        self.A = np.block([
+            [np.eye(self.orig_n) + self.delta * A_cont, self.delta * B_cont],
+            [np.zeros((self.m, self.orig_n)), np.eye(self.m)]
+        ])
+
+        # Compute matrix B
+        self.B = np.vstack((self.delta * B_cont, np.eye(self.m)))
+
+        # Compute matrix C
+        self.C = np.hstack((C_cont, np.zeros((self.q, self.m))))
+
+        # Update obj.n to the extended state dimension
+        self.n = A.shape[0]  # Extended state dimensio
+
 
     def tracker_std(self,S_bar, T_bar, Q_hat, Q_bar, R_bar):
         # Compute H
@@ -82,7 +110,7 @@ class TrackerModel:
             return 0.5 * np.dot(x.T, np.dot(H, x)) + np.dot(F, x)
 
         # Initial guess (make sure it's a sensible starting point)
-        x0 = np.zeros(u_cur.shape)  # Assuming u_cur has the correct dimension
+        x0 = np.zeros(70)  # Assuming u_cur has the correct dimension
 
         # Run the optimization
         result = minimize(fun=objective, x0=x0, args=(H, F), method='SLSQP')
