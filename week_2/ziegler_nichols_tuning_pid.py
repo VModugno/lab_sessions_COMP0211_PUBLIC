@@ -35,7 +35,7 @@ def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=
     sim_.ResetPose()
     
     # updating the kp value for the joint we want to tune
-    kp_vec = np.array([1000]*dyn_model.getNumberofActuatedJoints())
+    kp_vec = np.array([0]*dyn_model.getNumberofActuatedJoints())
     kp_vec[joints_id] = kp
 
     kd = np.array([0]*dyn_model.getNumberofActuatedJoints())
@@ -67,7 +67,7 @@ def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=
         # Ensure q_init is within the range of the amplitude
         
         # Control command
-        cmd.tau_cmd = feedback_lin_ctrl(dyn_model, q_mes, qd_mes, q_des, qd_des, kp, kd)  # Zero torque command
+        cmd.tau_cmd = feedback_lin_ctrl(dyn_model, q_mes, qd_mes, q_des, qd_des, kp_vec, kd)  # Zero torque command
         sim_.Step(cmd, "torque")  # Simulation step with torque command
 
         # Exit logic with 'q' key
