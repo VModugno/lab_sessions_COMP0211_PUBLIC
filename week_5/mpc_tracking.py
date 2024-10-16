@@ -89,9 +89,13 @@ def getCostMatrices(num_joints):
     num_controls = num_joints
     
     # Q = 1 * np.eye(num_states)  # State cost matrix
-    Q = 10000 * np.eye(num_states)
-    #Q[num_joints:, num_joints:] = 0.0
+    p_w = 10000
+    v_w = 10
+    Q_diag = np.array([p_w, p_w, p_w,p_w, p_w, p_w,p_w, v_w, v_w, v_w,v_w, v_w, v_w,v_w])
+    Q = np.diag(Q_diag)
     
+    print(Q)
+
     R = 0.1 * np.eye(num_controls)  # Control input cost matrix
     
     return Q, R
@@ -202,7 +206,7 @@ def main():
         # time.sleep(0.01)  # Slow down the loop for better visualization
         # get real time
         current_time += time_step
-        print(f"Time: {current_time}")
+        #print(f"Time: {current_time}")
     
     
     
