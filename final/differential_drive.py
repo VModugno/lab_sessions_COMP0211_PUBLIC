@@ -115,7 +115,11 @@ def main():
     ##### MPC control action #######
     v_linear = 0.0
     v_angular = 0.0
-
+    cmd = MotorCommands()  # Initialize command structure for motors
+    init_angular_wheels_velocity_cmd = np.array([0.0, 0.0, 0.0, 0.0])
+    init_interface_all_wheels = ["velocity", "velocity", "velocity", "velocity"]
+    cmd.SetControlCmd(init_angular_wheels_velocity_cmd, init_interface_all_wheels)
+    
     while True:
 
 
@@ -148,7 +152,7 @@ def main():
 
         # Figure out what the controller should do next
         # MPC section/ low level controller section ##################################################################
-        cmd = MotorCommands()  # Initialize command structure for motors
+       
    
         # Compute the matrices needed for MPC optimization
         # TODO here you want to update the matrices A and B at each time step if you want to linearize around the current points
