@@ -61,18 +61,18 @@ class RegulatorModel:
                 "Hint: Use the goal state (e.g., zeros) and zero control input at the beginning.\n"
                 "Also, ensure that you implement the linearization logic in the updateSystemMatrices function."
             )
-
+        
         A =[]
         B = []
         num_states = self.n
         num_controls = self.m
         num_outputs = self.q
         delta_t = sim.GetTimeStep()
-        v0 = cur_x[0]
+        v0 = cur_u[0]
         theta0 = cur_x[2]
         # get A and B matrices by linearinzing the cotinuous system dynamics
         # The linearized continuous-time system is:
-
+        
         # \[
         # \dot{\mathbf{x}} = A_c (\mathbf{x} - \mathbf{x}_0) + B_c (\mathbf{u} - \mathbf{u}_0).
         # \]
