@@ -16,7 +16,7 @@ landmarks = np.array([
         ])
 
 
-def landmark_range_observations(self, base_position):
+def landmark_range_observations(base_position):
     y = []
     C = []
     W = W_range
@@ -92,7 +92,7 @@ def main():
     N_mpc = 10
 
     # Initialize the regulator model
-    regulator = RegulatorModel(N_mpc, num_states, num_joints, num_states)
+    regulator = RegulatorModel(N_mpc, num_states, num_controls, num_states)
     # update A,B,C matrices
     # TODO provide state_x_for_linearization,cur_u_for_linearization to linearize the system
     # you can linearize around the final state and control of the robot (everything zero)
@@ -158,7 +158,7 @@ def main():
         # TODO here you want to update the matrices A and B at each time step if you want to linearize around the current points
         S_bar, T_bar, Q_bar, R_bar = regulator.propagation_model_regulator_fixed_std()
         H,F = regulator.compute_H_and_F(S_bar, T_bar, Q_bar, R_bar)
-        x0_mpc = np.vstack((base_pos[:2], base_bearing_))
+        x0_mpc = np.hstack((base_pos[:2], base_bearing_))
         x0_mpc = x0_mpc.flatten()
         # Compute the optimal control sequence
         H_inv = np.linalg.inv(H)
