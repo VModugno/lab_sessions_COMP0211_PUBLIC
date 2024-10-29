@@ -68,7 +68,7 @@ def main():
     sim,dyn_model,num_joints=init_simulator(conf_file_name)
 
     # adjusting floor friction
-    floor_friction = 1
+    floor_friction = 100
     sim.SetFloorFriction(floor_friction)
     # getting time step
     time_step = sim.GetTimeStep()
@@ -99,14 +99,19 @@ def main():
     # or you can linearize around the current state and control of the robot
     # in the second case case you need to update the matrices A and B at each time step
     # and recall everytime the method updateSystemMatrices
-    regulator.updateSystemMatrices(sim,state_x_for_linearization,cur_u_for_linearization)
+    init_pos  = np.array([2.0, 3.0])
+    init_quat = np.array([0,0,0.3827,0.9239])
+    init_base_bearing_ = quaternion2bearing(init_quat[3], init_quat[0], init_quat[1], init_quat[2])
+    cur_state_x_for_linearization = [init_pos[0], init_pos[1], init_base_bearing_]
+    cur_u_for_linearization = np.zeros(num_controls)
+    regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
     # Define the cost matrices
-    Qcoeff = 1000
-    Rcoeff = 1
+    Qcoeff = np.array([310, 310, 80.0])
+    Rcoeff = 0.5
     regulator.setCostMatrices(Qcoeff,Rcoeff)
    
 
-
+    u_mpc = np.zeros(num_controls)
 
     ##### robot parameters ########
     wheel_radius = 0.11
@@ -156,6 +161,10 @@ def main():
    
         # Compute the matrices needed for MPC optimization
         # TODO here you want to update the matrices A and B at each time step if you want to linearize around the current points
+        # add this 3 lines if you want to update the A and B matrices at each time step 
+        #cur_state_x_for_linearization = [base_pos[0], base_pos[1], base_bearing_]
+        #cur_u_for_linearization = u_mpc
+        #regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
         S_bar, T_bar, Q_bar, R_bar = regulator.propagation_model_regulator_fixed_std()
         H,F = regulator.compute_H_and_F(S_bar, T_bar, Q_bar, R_bar)
         x0_mpc = np.hstack((base_pos[:2], base_bearing_))
@@ -172,15 +181,12 @@ def main():
         cmd.SetControlCmd(angular_wheels_velocity_cmd, interface_all_wheels)
 
 
-       
-
         # Exit logic with 'q' key (unchanged)
         keys = sim.GetPyBulletClient().getKeyboardEvents()
         qKey = ord('q')
         if qKey in keys and keys[qKey] and sim.GetPyBulletClient().KEY_WAS_TRIGGERED:
             break
         
-
 
         # Store data for plotting if necessary
         base_pos_all.append(base_pos)
