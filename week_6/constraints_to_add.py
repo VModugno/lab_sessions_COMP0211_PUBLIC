@@ -14,7 +14,7 @@ def regulator_S_std(self, T_bar):
  
 # B_In input bound constraints (dict): A dictionary containing the input bound constraints.
 # B_Out output bound constraints (dict): A dictionary containing the output bound constraints.
-def regulator_W_nonMut_std(self, B_Out, B_In):
+def regulator_W_std(self, B_Out, B_In):
     # Check if 'min' fields are not empty and exist in B_Out and B_In
     out_min_present = 'min' in B_Out and B_Out['min'] is not None
     in_min_present = 'min' in B_In and B_In['min'] is not None
