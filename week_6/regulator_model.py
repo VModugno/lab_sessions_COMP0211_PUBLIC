@@ -147,7 +147,7 @@ class RegulatorModel:
     def compute_solution(self, x0_mpc, F, H):
         # Update the objective function based on the given equation
         def objective(z, H, F, x0_mpc):
-            return -0.5 * np.dot(z.T, np.dot(H, z)) + np.dot(x0_mpc.T, np.dot(F.T, z))
+            return 0.5 * np.dot(z.T, np.dot(H, z)) + np.dot(x0_mpc.T, np.dot(F.T, z))
 
         # Initial guess (size should be determined by problem dimension)
         z0 = np.zeros(self.m * self.N)  # Assuming z has dimensions m * N
