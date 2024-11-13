@@ -2,7 +2,7 @@ import numpy as np
 from scipy.optimize import minimize
     
 class RegulatorModel:
-    def __init__(self, N, q, m, n):
+    def __init__(self, N, q, m, n,constr_flag=False):
         self.A = None
         self.B = None
         self.C = None
@@ -15,6 +15,7 @@ class RegulatorModel:
         self.q = q #  output dimension
         self.m = m #  input dimension
         self.n = n #  state dimension
+        self.constr_flag = constr_flag
 
     def compute_H_and_F(self, S_bar, T_bar, Q_bar, R_bar):
         # Compute H
@@ -249,6 +250,17 @@ class RegulatorModel:
             return (W_flat + np.dot(S, x0_mpc)) - np.dot(G, z)
         # Constraints
         cons = {'type': 'ineq', 'fun': constraint, 'args': (self.G, self.W, self.S, x0_mpc)}
+
+        if self.constr_flag:
+            # Constraint function
+            def constraint(z, G, W, S, x0_mpc):
+                W_flat = W.flatten()
+                return (W_flat + S @ x0_mpc) - G @ z
+
+            # Constraints dictionary
+            cons = {'type': 'ineq', 'fun': constraint, 'args': (self.G, self.W, self.S, x0_mpc)}
+        else:
+            cons = None  # No constraints
 
         # Initial guess (size should be determined by problem dimension)
         z0 = np.zeros(self.m * self.N)  # Assuming z has dimensions m * N
