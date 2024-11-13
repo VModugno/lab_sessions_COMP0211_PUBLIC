@@ -45,10 +45,14 @@ def main():
     # define system matrices
     regulator.setSystemMatrices(time_step)
     # Define the cost matrices
-    y_coeff= 0.45
-    Qcoeff=np.array([y_coeff, 1.6*y_coeff,3.85*y_coeff])
-    #Qcoeff = np.array([30, 30, 1.0])
-    Rcoeff = [0.005,0.001]
+   
+    Qcoeff_joint_pos = [1000] * num_controls
+    Qcoeff_joint_vel = [0] * num_controls
+    # making one vectro Qcoeff
+    Qcoeff = np.hstack((Qcoeff_joint_pos, Qcoeff_joint_vel))
+    Rcoeff = [0.0]*num_controls
+    
+    R = 0.1 * np.eye(num_controls)  # Control input cost matrix
     regulator.setCostMatrices(Qcoeff,Rcoeff)
     
     # data storage

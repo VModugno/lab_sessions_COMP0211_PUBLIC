@@ -6,3 +6,4 @@ models/
 configs/
 final/__pycache__/regulator_model.cpython-311.pyc
 .vscode/launch.json
+week_6/__pycache__/regulator_model.cpython-311.pyc
