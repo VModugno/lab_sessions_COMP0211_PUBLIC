@@ -54,6 +54,18 @@ def main():
     
     R = 0.1 * np.eye(num_controls)  # Control input cost matrix
     regulator.setCostMatrices(Qcoeff,Rcoeff)
+    # Define the constraints
+    joint_position_constr= np.array([4*np.pi]*num_controls)
+    joint_velocity_constr = np.array([80]*num_controls)
+    # stack joint position and velocity constraints
+    max_state_constraints = np.hstack((joint_position_constr, joint_velocity_constr))
+    min_state_constraints = np.hstack((-joint_position_constr, -joint_velocity_constr))
+    B_in = {'max': np.array([1000] * num_controls), 'min': np.array([-1000] * num_controls)}
+    B_out = {'max': max_state_constraints, 'min': min_state_constraints}
+    S_bar, T_bar, Q_bar, R_bar = regulator.propagation_model_regulator_fixed_std()
+    # creating constraints matrices
+    regulator.setConstraintsMatrices(B_in,B_out,S_bar,T_bar)
+    H,F = regulator.compute_H_and_F(S_bar, T_bar, Q_bar, R_bar)
     
     # data storage
     q_mes_all, qd_mes_all, q_d_all, qd_d_all = [], [], [], []
@@ -73,8 +85,7 @@ def main():
 
         # Figure out what the controller should do next
         # MPC section/ low level controller section ##################################################################
-        S_bar, T_bar, Q_bar, R_bar = regulator.propagation_model_regulator_fixed_std()
-        H,F = regulator.compute_H_and_F(S_bar, T_bar, Q_bar, R_bar)
+       
         x0_mpc = np.vstack((q_mes, qd_mes))
         x0_mpc = x0_mpc.flatten()
         u_mpc = regulator.compute_solution(x0_mpc, F, H)

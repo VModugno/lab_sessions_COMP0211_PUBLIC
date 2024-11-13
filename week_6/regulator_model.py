@@ -169,35 +169,64 @@ class RegulatorModel:
         out_min_present = 'min' in B_Out and B_Out['min'] is not None
         in_min_present = 'min' in B_In and B_In['min'] is not None
 
+        # if out_min_present:
+        #     if in_min_present:  # out min true, in min true
+        #         block1 = np.kron(np.ones((self.N, 1)), B_Out['max'])
+        #         block2 = np.kron(np.ones((self.N, 1)), -B_Out['min'])
+        #         block3 = np.kron(np.ones((self.N, 1)), B_In['max'])
+        #         block4 = np.kron(np.ones((self.N, 1)), -B_In['min'])
+        #     else:  # out min true, in min false
+        #         W = np.vstack([
+        #             np.kron(np.ones((self.N, 1)), B_Out['max']),
+        #             np.kron(np.ones((self.N, 1)), -B_Out['min']),
+        #             np.kron(np.ones((self.N, 1)), B_In['max']),
+        #             np.kron(np.ones((self.N, 1)), B_In['max'])
+        #         ])
+        # elif in_min_present:  # out min false, in min true
+        #     W = np.vstack([
+        #         np.kron(np.ones((self.N, 1)), B_Out['max']),
+        #         np.kron(np.ones((self.N, 1)), B_Out['max']),
+        #         np.kron(np.ones((self.N, 1)), B_In['max']),
+        #         np.kron(np.ones((self.N, 1)), B_In['min'])
+        #     ])
+        # else:  # out min false, in min false
+        #     W = np.vstack([
+        #         np.kron(np.ones((self.N, 1)), B_Out['max']),
+        #         np.kron(np.ones((self.N, 1)), B_Out['max']),
+        #         np.kron(np.ones((self.N, 1)), B_In['max']),
+        #         np.kron(np.ones((self.N, 1)), B_In['max'])
+        #     ])
+
         if out_min_present:
             if in_min_present:  # out min true, in min true
-                W = np.vstack([
-                    np.kron(np.ones((self.N, 1)), B_Out['max']),
-                    np.kron(np.ones((self.N, 1)), -B_Out['min']),
-                    np.kron(np.ones((self.N, 1)), B_In['max']),
-                    np.kron(np.ones((self.N, 1)), -B_In['min'])
-                ])
+                block1 = np.kron(np.ones((self.N, 1)), B_Out['max'])
+                block2 = np.kron(np.ones((self.N, 1)), -B_Out['min'])
+                block3 = np.kron(np.ones((self.N, 1)), B_In['max'])
+                block4 = np.kron(np.ones((self.N, 1)), -B_In['min'])
             else:  # out min true, in min false
-                W = np.vstack([
-                    np.kron(np.ones((self.N, 1)), B_Out['max']),
-                    np.kron(np.ones((self.N, 1)), -B_Out['min']),
-                    np.kron(np.ones((self.N, 1)), B_In['max']),
-                    np.kron(np.ones((self.N, 1)), B_In['max'])
-                ])
-        elif in_min_present:  # out min false, in min true
-            W = np.vstack([
-                np.kron(np.ones((self.N, 1)), B_Out['max']),
-                np.kron(np.ones((self.N, 1)), B_Out['max']),
-                np.kron(np.ones((self.N, 1)), B_In['max']),
-                np.kron(np.ones((self.N, 1)), B_In['min'])
-            ])
-        else:  # out min false, in min false
-            W = np.vstack([
-                np.kron(np.ones((self.N, 1)), B_Out['max']),
-                np.kron(np.ones((self.N, 1)), B_Out['max']),
-                np.kron(np.ones((self.N, 1)), B_In['max']),
-                np.kron(np.ones((self.N, 1)), B_In['max'])
-            ])
+                block1 = np.kron(np.ones((self.N, 1)), B_Out['max'])
+                block2 = np.kron(np.ones((self.N, 1)), -B_Out['min'])
+                block3 = np.kron(np.ones((self.N, 1)), B_In['max'])
+                block4 = np.kron(np.ones((self.N, 1)), B_In['max'])  # Using max since min is not present
+        else:
+            if in_min_present:  # out min false, in min true
+                block1 = np.kron(np.ones((self.N, 1)), B_Out['max'])
+                block2 = np.kron(np.ones((self.N, 1)), B_Out['max'])  # Repeating max since min is not present
+                block3 = np.kron(np.ones((self.N, 1)), B_In['max'])
+                block4 = np.kron(np.ones((self.N, 1)), -B_In['min'])
+            else:  # out min false, in min false
+                block1 = np.kron(np.ones((self.N, 1)), B_Out['max'])
+                block2 = np.kron(np.ones((self.N, 1)), B_Out['max'])
+                block3 = np.kron(np.ones((self.N, 1)), B_In['max'])
+                block4 = np.kron(np.ones((self.N, 1)), B_In['max'])
+
+        vec1 = block1.flatten().reshape(-1, 1)  
+        vec2 = block2.flatten().reshape(-1, 1)
+        vec3 = block3.flatten().reshape(-1, 1)
+        vec4 = block4.flatten().reshape(-1, 1)
+
+        # Step 3: Vertically stack all vectors
+        W = np.vstack([vec1, vec2, vec3, vec4])  
         return W
 
     # added function to compute constraints matrices
@@ -216,7 +245,8 @@ class RegulatorModel:
         
         # Constraint function
         def constraint(z, G, W, S, x0_mpc):
-            return (W + np.dot(S, x0_mpc)) - np.dot(G, z)
+            W_flat = W.flatten()
+            return (W_flat + np.dot(S, x0_mpc)) - np.dot(G, z)
         # Constraints
         cons = {'type': 'ineq', 'fun': constraint, 'args': (self.G, self.W, self.S, x0_mpc)}
 
