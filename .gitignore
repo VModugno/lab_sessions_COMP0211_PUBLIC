@@ -4,3 +4,5 @@ models/
 
 # Ignore the egg-info directory
 configs/
+final/__pycache__/regulator_model.cpython-311.pyc
+.vscode/launch.json
