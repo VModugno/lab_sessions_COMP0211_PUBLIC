@@ -208,17 +208,23 @@ class RegulatorModel:
         self.W = self.regulator_W_std(B_out, B_in)
     
 
-
+    # add constraints to the optimization problem
     def compute_solution(self, x0_mpc, F, H):
         # Update the objective function based on the given equation
         def objective(z, H, F, x0_mpc):
             return 0.5 * np.dot(z.T, np.dot(H, z)) + np.dot(x0_mpc.T, np.dot(F.T, z))
+        
+        # Constraint function
+        def constraint(z, G, W, S, x0_mpc):
+            return (W + np.dot(S, x0_mpc)) - np.dot(G, z)
+        # Constraints
+        cons = {'type': 'ineq', 'fun': constraint, 'args': (self.G, self.W, self.S, x0_mpc)}
 
         # Initial guess (size should be determined by problem dimension)
         z0 = np.zeros(self.m * self.N)  # Assuming z has dimensions m * N
 
         # Run the optimization
-        result = minimize(fun=objective, x0=z0, args=(H, F, x0_mpc), method='SLSQP')
+        result = minimize(fun=objective, x0=z0, args=(H, F, x0_mpc), method='SLSQP', constraints=cons)
 
         z_star = result.x
         return z_star
