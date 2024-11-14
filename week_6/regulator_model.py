@@ -3,14 +3,14 @@ from scipy.optimize import minimize
     
 class RegulatorModel:
     def __init__(self, N, q, m, n,constr_flag=False):
-        self.A = None
-        self.B = None
-        self.C = None
-        self.Q = None
-        self.R = None
-        self.W = None
-        self.G = None
-        self.S = None
+        self.A = None # state transition matrix
+        self.B = None # input matrix
+        self.C = None # output matrix
+        self.Q = None # cost matrix
+        self.R = None # cost matrix
+        self.W = None # constraints matrix
+        self.G = None # constraints matrix
+        self.S = None # constraints matrix  
         self.N = N
         self.q = q #  output dimension
         self.m = m #  input dimension
@@ -70,26 +70,38 @@ class RegulatorModel:
 
         # Initialize A matrix
         A = np.eye(num_states)
+
+
+        # Zero and identity blocks
+        identity_block = np.eye(num_controls)
+
+        # Initialize matrix A
+        A = np.zeros((2 * num_controls, 2 * num_controls))
+
+        # Assign blocks
+        A[:num_controls, num_controls:] = identity_block  
+
+        A_disc = np.eye(num_states) + delta_t * A
         
-        # Upper right quadrant of A (position affected by velocity)
-        A[:num_joints, num_joints:] = np.eye(num_joints) * delta_t
+        # # Upper right quadrant of A (position affected by velocity)
+        # A[:num_joints, num_joints:] = np.eye(num_joints) * delta_t
         
-        # Lower right quadrant of A (velocity affected by damping)
-        if damping_coefficients is not None:
-            damping_matrix = np.diag(damping_coefficients)
-            A[num_joints:, num_joints:] = np.eye(num_joints) - delta_t * damping_matrix
+        # # Lower right quadrant of A (velocity affected by damping)
+        # if damping_coefficients is not None:
+        #     damping_matrix = np.diag(damping_coefficients)
+        #     A[num_joints:, num_joints:] = np.eye(num_joints) - delta_t * damping_matrix
         
         # Initialize B matrix
-        B = np.zeros((num_states, num_controls))
+        B_disc = np.zeros((num_states, num_controls))
         
         # Lower half of B (control input affects velocity)
-        B[num_joints:, :] = np.eye(num_controls) * delta_t
+        B_disc[num_joints:, :] = np.eye(num_controls) * delta_t
         
         
         
 
-        self.A = A
-        self.B = B
+        self.A = A_disc
+        self.B = B_disc
         self.C = np.eye(num_outputs)
         
 
@@ -198,28 +210,28 @@ class RegulatorModel:
         #         np.kron(np.ones((self.N, 1)), B_In['max'])
         #     ])
 
-        if out_min_present:
-            if in_min_present:  # out min true, in min true
-                block1 = np.kron(np.ones((self.N, 1)), B_Out['max'])
-                block2 = np.kron(np.ones((self.N, 1)), -B_Out['min'])
-                block3 = np.kron(np.ones((self.N, 1)), B_In['max'])
-                block4 = np.kron(np.ones((self.N, 1)), -B_In['min'])
-            else:  # out min true, in min false
-                block1 = np.kron(np.ones((self.N, 1)), B_Out['max'])
-                block2 = np.kron(np.ones((self.N, 1)), -B_Out['min'])
-                block3 = np.kron(np.ones((self.N, 1)), B_In['max'])
-                block4 = np.kron(np.ones((self.N, 1)), B_In['max'])  # Using max since min is not present
-        else:
-            if in_min_present:  # out min false, in min true
-                block1 = np.kron(np.ones((self.N, 1)), B_Out['max'])
-                block2 = np.kron(np.ones((self.N, 1)), B_Out['max'])  # Repeating max since min is not present
-                block3 = np.kron(np.ones((self.N, 1)), B_In['max'])
-                block4 = np.kron(np.ones((self.N, 1)), -B_In['min'])
-            else:  # out min false, in min false
-                block1 = np.kron(np.ones((self.N, 1)), B_Out['max'])
-                block2 = np.kron(np.ones((self.N, 1)), B_Out['max'])
-                block3 = np.kron(np.ones((self.N, 1)), B_In['max'])
-                block4 = np.kron(np.ones((self.N, 1)), B_In['max'])
+        #if out_min_present:
+            #if in_min_present:  # out min true, in min true
+        block1 = np.kron(np.ones((self.N, 1)), B_Out['max'])
+        block2 = np.kron(np.ones((self.N, 1)), -B_Out['min'])
+        block3 = np.kron(np.ones((self.N, 1)), B_In['max'])
+        block4 = np.kron(np.ones((self.N, 1)), -B_In['min'])
+        #     else:  # out min true, in min false
+        #         block1 = np.kron(np.ones((self.N, 1)), B_Out['max'])
+        #         block2 = np.kron(np.ones((self.N, 1)), -B_Out['min'])
+        #         block3 = np.kron(np.ones((self.N, 1)), B_In['max'])
+        #         block4 = np.kron(np.ones((self.N, 1)), B_In['max'])  # Using max since min is not present
+        # else:
+        #     if in_min_present:  # out min false, in min true
+        #         block1 = np.kron(np.ones((self.N, 1)), B_Out['max'])
+        #         block2 = np.kron(np.ones((self.N, 1)), B_Out['max'])  # Repeating max since min is not present
+        #         block3 = np.kron(np.ones((self.N, 1)), B_In['max'])
+        #         block4 = np.kron(np.ones((self.N, 1)), -B_In['min'])
+        #     else:  # out min false, in min false
+        #         block1 = np.kron(np.ones((self.N, 1)), B_Out['max'])
+        #         block2 = np.kron(np.ones((self.N, 1)), B_Out['max'])
+        #         block3 = np.kron(np.ones((self.N, 1)), B_In['max'])
+        #         block4 = np.kron(np.ones((self.N, 1)), B_In['max'])
 
         vec1 = block1.flatten().reshape(-1, 1)  
         vec2 = block2.flatten().reshape(-1, 1)
@@ -244,18 +256,19 @@ class RegulatorModel:
         def objective(z, H, F, x0_mpc):
             return 0.5 * np.dot(z.T, np.dot(H, z)) + np.dot(x0_mpc.T, np.dot(F.T, z))
         
-        # Constraint function
-        def constraint(z, G, W, S, x0_mpc):
-            W_flat = W.flatten()
-            return (W_flat + np.dot(S, x0_mpc)) - np.dot(G, z)
-        # Constraints
-        cons = {'type': 'ineq', 'fun': constraint, 'args': (self.G, self.W, self.S, x0_mpc)}
+        # # Constraint function
+        # def constraint(z, G, W, S, x0_mpc):
+        #     W_flat = W.flatten()
+        #     return (W_flat + np.dot(S, x0_mpc)) - np.dot(G, z)
+        # # Constraints
+        # cons = {'type': 'ineq', 'fun': constraint, 'args': (self.G, self.W, self.S, x0_mpc)}
 
         if self.constr_flag:
             # Constraint function
             def constraint(z, G, W, S, x0_mpc):
                 W_flat = W.flatten()
-                return (W_flat + S @ x0_mpc) - G @ z
+                # here we use inequality constraints of type Gz <= W + Sx0      +W+Sx0 -Gz >=  0
+                return (+W_flat + S @ x0_mpc) -G @ z
 
             # Constraints dictionary
             cons = {'type': 'ineq', 'fun': constraint, 'args': (self.G, self.W, self.S, x0_mpc)}
@@ -265,8 +278,16 @@ class RegulatorModel:
         # Initial guess (size should be determined by problem dimension)
         z0 = np.zeros(self.m * self.N)  # Assuming z has dimensions m * N
 
+        # Options to increase numerical accuracy
+        options_dict = {
+            'ftol': 1e-12,        # Increase precision goal for the objective function 
+            'eps': 1e-12,         # Smaller step size for gradient approximation
+            'maxiter': 1000,      # Allow more iterations to find a more accurate solution
+            'disp': True          # Display convergence messages for debugging
+        }
+
         # Run the optimization
-        result = minimize(fun=objective, x0=z0, args=(H, F, x0_mpc), method='SLSQP', constraints=cons)
+        result = minimize(fun=objective, x0=z0, args=(H, F, x0_mpc), method='SLSQP', constraints=cons,options=options_dict)
 
         z_star = result.x
         return z_star

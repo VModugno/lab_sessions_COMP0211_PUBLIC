@@ -7,7 +7,7 @@ from simulation_and_control import differential_drive_regulation_controller,regu
 import pinocchio as pin
 from regulator_model import RegulatorModel
 
-
+constraints_flag = True
 
 
 def init_simulator(conf_file_name):
@@ -31,7 +31,7 @@ def main():
 
     # getting time step
     time_step = sim.GetTimeStep()
-    current_time = 0
+    
 
     # initializing MPC
      # Define the matrices
@@ -41,7 +41,7 @@ def main():
     # Horizon length
     N_mpc = 10
     # Initialize the regulator model
-    regulator = RegulatorModel(N_mpc, num_states, num_controls, num_states)
+    regulator = RegulatorModel(N_mpc, num_states, num_controls, num_states,constr_flag=constraints_flag)
     # define system matrices
     regulator.setSystemMatrices(time_step)
     # Define the cost matrices
@@ -60,21 +60,23 @@ def main():
     # stack joint position and velocity constraints
     max_state_constraints = np.hstack((joint_position_constr, joint_velocity_constr))
     min_state_constraints = np.hstack((-joint_position_constr, -joint_velocity_constr))
-    B_in = {'max': np.array([1000] * num_controls), 'min': np.array([-1000] * num_controls)}
+    B_in = {'max': np.array([100000000000000] * num_controls), 'min': np.array([-1000000000000] * num_controls)}
     B_out = {'max': max_state_constraints, 'min': min_state_constraints}
     S_bar, T_bar, Q_bar, R_bar = regulator.propagation_model_regulator_fixed_std()
     # creating constraints matrices
     regulator.setConstraintsMatrices(B_in,B_out,S_bar,T_bar)
     H,F = regulator.compute_H_and_F(S_bar, T_bar, Q_bar, R_bar)
     
-    # data storage
-    q_mes_all, qd_mes_all, q_d_all, qd_d_all = [], [], [], []
+    # Data storage
+    q_mes_all, qd_mes_all, u_mpc_all, time_all = [], [], [], []
 
     # command object
     cmd = MotorCommands()
 
+    current_time = 0.0
+    total_time = 5.0
 
-    while True:
+    while current_time < 5.0:
 
 
         # Measured state 
@@ -89,6 +91,12 @@ def main():
         x0_mpc = np.vstack((q_mes, qd_mes))
         x0_mpc = x0_mpc.flatten()
         u_mpc = regulator.compute_solution(x0_mpc, F, H)
+
+        # Store data for visualization
+        q_mes_all.append(q_mes.copy())
+        qd_mes_all.append(qd_mes.copy())
+        u_mpc_all.append(u_mpc.copy())
+        time_all.append(current_time)
         
         # Return the optimal control sequence
         u_mpc = u_mpc[0:num_controls] 
@@ -109,9 +117,47 @@ def main():
 
         # Update current time
         current_time += time_step
+        print(f"Current time: {current_time}")
 
-    # Plotting 
-    #add visualization of final x, y, trajectory and theta
+    # Convert lists to arrays
+    q_mes_all = np.array(q_mes_all)
+    qd_mes_all = np.array(qd_mes_all)
+    u_mpc_all = np.array(u_mpc_all)
+    time_all = np.array(time_all)
+    
+    # Plotting
+    plt.figure(figsize=(12, 8))
+
+    # Plot joint positions
+    plt.subplot(3, 1, 1)
+    for i in range(num_joints):
+        plt.plot(time_all, q_mes_all[:, i], label=f'Joint {i+1}')
+    plt.title('Joint Positions')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Position [rad]')
+    plt.legend()
+
+    # Plot joint velocities
+    plt.subplot(3, 1, 2)
+    for i in range(num_joints):
+        plt.plot(time_all, qd_mes_all[:, i], label=f'Joint {i+1}')
+    plt.title('Joint Velocities')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Velocity [rad/s]')
+    plt.legend()
+
+    # Plot control inputs
+    plt.subplot(3, 1, 3)
+    for i in range(num_controls):
+        plt.plot(time_all, u_mpc_all[:, i], label=f'Control {i+1}')
+    plt.title('Control Inputs (u_mpc)')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Control Input')
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
     
     
     
