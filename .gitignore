@@ -7,3 +7,7 @@ configs/
 final/__pycache__/regulator_model.cpython-311.pyc
 .vscode/launch.json
 week_6/__pycache__/regulator_model.cpython-311.pyc
+final_master/__pycache__/regulator_model.cpython-311.pyc
+finals_Meng/task1/__pycache__/dc_model.cpython-311.pyc
+finals_Meng/task1/__pycache__/observer.cpython-311.pyc
+finals_Meng/task1/__pycache__/regulator_model.cpython-311.pyc
