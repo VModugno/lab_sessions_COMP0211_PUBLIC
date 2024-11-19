@@ -60,7 +60,7 @@ def main():
     # stack joint position and velocity constraints
     max_state_constraints = np.hstack((joint_position_constr, joint_velocity_constr))
     min_state_constraints = np.hstack((-joint_position_constr, -joint_velocity_constr))
-    B_in = {'max': np.array([100000000000000] * num_controls), 'min': np.array([-1000000000000] * num_controls)}
+    B_in = {'max': np.array([100] * num_controls), 'min': np.array([-100] * num_controls)}
     B_out = {'max': max_state_constraints, 'min': min_state_constraints}
     S_bar, T_bar, Q_bar, R_bar = regulator.propagation_model_regulator_fixed_std()
     # creating constraints matrices
