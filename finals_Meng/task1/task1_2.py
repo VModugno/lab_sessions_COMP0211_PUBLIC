@@ -50,9 +50,8 @@ regulator = RegulatorModel(N_mpc, num_states, num_controls, num_states,constr_fl
 regulator.setSystemMatrices(dt,motor_model.getA(),motor_model.getB())
 # Define the cost matrices
 
-# TODO define the appropriate cost matrices
-Qcoeff = 
-Rcoeff = 
+Qcoeff = [1000.0,0.0]
+Rcoeff = [0.01]*num_controls
 
 regulator.setCostMatrices(Qcoeff,Rcoeff)
 x_ref = np.array([-10,0])
@@ -74,9 +73,7 @@ T_m_estimated = np.zeros(num_steps)
 V_terminal = np.zeros(num_steps)
 V_terminal_hat = np.zeros(num_steps)
 
-# current system state
 x_cur = x_init
-# current estimated state
 x_hat_cur = x_hat_init
 # Simulation loop using Euler integration
 for k in range(num_steps):
@@ -84,8 +81,6 @@ for k in range(num_steps):
     t = time[k]
     
     # compute control input
-    # TODO cnahge x_hat_cur to x_cur to test the observer
-    # only after that replace x_cur with x_hat_cur to test the MPC
     u_mpc = regulator.compute_solution(x_hat_cur)
     V_a = u_mpc[0]
 

@@ -14,8 +14,8 @@ class Observer:
     def update(self, u, y):
         if self.L is None:
             raise ValueError("Observer gains have not been computed.")
-        # TODO implement the observer update step and return the estimated state x_hat
-        #  and the estimated output y_hat
+        self.x_hat = self.x_hat + (self.A @ self.x_hat + self.B.flatten() * u - self.L @ (self.C @ self.x_hat - y)) * self.dt
+        y_hat = self.C @ self.x_hat
         
         return self.x_hat, y_hat
     # this function assign the poles to the observer specified in lambda_1 and lambda_2

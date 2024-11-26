@@ -12,9 +12,8 @@ R_a = 1.0     # Armature resistance (Ohm)
 L_a = 0.001   # Armature inductance (H)
 
 # Desired Eigenvalues for Observer
-# TODO specify the desired observer poles (lambda_1, lambda_2)
-lambda_1 = 
-lambda_2 = 
+lambda_1 = -500.0
+lambda_2 = -600.0
 
 # Simulation Parameters
 t_start = 0.0
