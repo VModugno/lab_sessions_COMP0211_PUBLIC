@@ -45,8 +45,27 @@ def main():
     num_controls = num_joints
     
     # TODO define the matrice A_cont and B_cont assuming that the system is linear
-    A_cont = None
-    B_cont = None
+    # Construct A matrix
+    # A is a block matrix of the form:
+    # A = [[0, I],
+    #      [0, 0]]
+    #
+    # where each block is a 7x7 matrix.
+
+    A_cont = np.zeros((num_states, num_states))  # 14x14 matrix
+    A_cont[0:num_joints, num_joints:num_states] = np.eye(num_joints)
+
+    # Construct B matrix
+    # B is a block matrix of the form:
+    # B = [[0],
+    #      [I]]
+    #
+    # where each block is 7x7.
+
+    B_cont = np.zeros((num_states, num_controls))  # 14x7 matrix
+    B_cont[num_joints:num_states, :] = np.eye(num_controls)
+    #A_cont = None
+    #B_cont = None
     #Horizon length
     N_mpc = 10
     # Initialize the regulator model
@@ -55,17 +74,23 @@ def main():
     regulator.setSystemMatrices(time_step,A_cont,B_cont)
     # Define the cost matrices
 
-    Qcoeff_joint_pos = [1000] * num_controls
-    Qcoeff_joint_vel = [0] * num_controls
+    Qcoeff_joint_pos = [100] * num_controls
+    Qcoeff_joint_vel = [0.1] * num_controls
     # making one vectro Qcoeff
     Qcoeff = np.hstack((Qcoeff_joint_pos, Qcoeff_joint_vel))
-    Rcoeff = [0.0]*num_controls
+    Rcoeff = [0.1]*num_controls
 
     regulator.setCostMatrices(Qcoeff,Rcoeff)
-    x_ref = goal_joints
+    # define goal position and velocity
+    # goal_joints: desired positions of dimension num_joints
+    # desired_velocities: desired velocities of dimension num_joints
+    # For simplicity, let's assume you want zero velocities at the goal:
+    desired_velocities = np.zeros(num_joints)
+    #x_ref = goal_joints
+    x_ref = np.hstack([goal_joints, desired_velocities])
     regulator.propagation_model_regulator_fixed_std(x_ref)
     B_in = {'max': np.array([100000000000000] * num_controls), 'min': np.array([-1000000000000] * num_controls)}
-    B_out = {'max': np.array([100000000,1000000000]), 'min': np.array([-100000000,-1000000000])}
+    B_out = {'max': np.array([100000000]*num_states), 'min': np.array([-100000000]*num_states)}
     # creating constraints matrices
     regulator.setConstraintsMatrices(B_in,B_out)
     regulator.compute_H_and_F()
@@ -135,6 +160,8 @@ def main():
     plt.subplot(3, 1, 1)
     for i in range(num_joints):
         plt.plot(time_all, q_mes_all[:, i], label=f'Joint {i+1}')
+    for i in range(num_joints):
+        plt.plot(time_all, np.ones_like(time_all)*goal_joints[i], '--', label=f'Joint {i+1} Ref')
     plt.title('Joint Positions')
     plt.xlabel('Time [s]')
     plt.ylabel('Position [rad]')

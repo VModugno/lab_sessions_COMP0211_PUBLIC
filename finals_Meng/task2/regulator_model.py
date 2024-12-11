@@ -235,42 +235,93 @@ class RegulatorModel:
 
     # add constraints to the optimization problem
     def compute_solution(self, x0_mpc):
-        # Update the objective function based on the given equation
-        def objective(z, x0_mpc,H,F, F_ref=None):
-            if F_ref is not None:
-                F_full = F_ref + np.dot(F,x0_mpc)[:, np.newaxis]
-                return 0.5 * np.dot(z.T, np.dot(H, z)) +  np.dot(F_full.T, z)
-            else:  
-                return 0.5 * np.dot(z.T, np.dot(H, z)) + np.dot(x0_mpc.T, np.dot(F.T, z))
+         # Update the objective function based on the given equation
+         def objective(z, x0_mpc,H,F, F_ref=None):
+             if F_ref is not None:
+                 F_full = -F_ref + np.dot(F,x0_mpc)[:, np.newaxis]
+                 return 0.5 * np.dot(z.T, np.dot(H, z)) +  np.dot(F_full.T, z)
+             else:  
+                 return 0.5 * np.dot(z.T, np.dot(H, z)) + np.dot(x0_mpc.T, np.dot(F.T, z))
 
-        if self.constr_flag:
-            # Constraint function
-            def constraint(z, G, W, S, x0_mpc):
-                W_flat = W.flatten()
-                # here we use inequality constraints of type Gz <= W + Sx0      +W+Sx0 -Gz >=  0
-                return (+W_flat + S @ x0_mpc) -G @ z
+         if self.constr_flag:
+             # Constraint function
+             def constraint(z, G, W, S, x0_mpc):
+                 W_flat = W.flatten()
+                 # here we use inequality constraints of type Gz <= W + Sx0      +W+Sx0 -Gz >=  0
+                 return (+W_flat + S @ x0_mpc) -G @ z
 
-            # Constraints dictionary
-            cons = {'type': 'ineq', 'fun': constraint, 'args': (self.G, self.W, self.S, x0_mpc)}
-        else:
-            cons = None  # No constraints
+             # Constraints dictionary
+             cons = {'type': 'ineq', 'fun': constraint, 'args': (self.G, self.W, self.S, x0_mpc)}
+         else:
+             cons = None  # No constraints
 
-        # Initial guess (size should be determined by problem dimension)
-        z0 = np.zeros(self.m * self.N)  # Assuming z has dimensions m * N
+         # Initial guess (size should be determined by problem dimension)
+         z0 = np.zeros(self.m * self.N)  # Assuming z has dimensions m * N
 
-        # Options to increase numerical accuracy
-        options_dict = {
-            'ftol': 1e-12,        # Increase precision goal for the objective function 
-            'eps': 1e-12,         # Smaller step size for gradient approximation
-            'maxiter': 1000,      # Allow more iterations to find a more accurate solution
-            'disp': True          # Display convergence messages for debugging
-        }
+         # Options to increase numerical accuracy
+         options_dict = {
+             'ftol': 1e-12,        # Increase precision goal for the objective function 
+             'eps': 1e-12,         # Smaller step size for gradient approximation
+             'maxiter': 1000,      # Allow more iterations to find a more accurate solution
+             'disp': True          # Display convergence messages for debugging
+         }
 
-        # Run the optimization
-        result = minimize(fun=objective, x0=z0, args=(x0_mpc,self.H,self.F, self.F_ref), method='SLSQP', constraints=cons,options=options_dict)
+         # Run the optimization
+         result = minimize(fun=objective, x0=z0, args=(x0_mpc,self.H,self.F, self.F_ref), method='SLSQP', constraints=cons,options=options_dict)
 
-        z_star = result.x
-        return z_star
+         z_star = result.x
+         return z_star
+
+
+    # def compute_solution(self, x0_mpc):
+    #     # Precompute the constant term: (T_bar x0 - x_ref_bar)^T Q_bar (T_bar x0 - x_ref_bar)
+    #     # This makes sure the cost reflects the proper nonnegative quadratic form.
+    #     diff = self.T_bar @ x0_mpc
+    #     diff = diff[:, np.newaxis]
+    #     diff = diff - (self.x_ref_bar if self.x_ref_bar is not None else 0)
+    #     #diff = self.T_bar @ x0_mpc - (self.x_ref_bar if self.x_ref_bar is not None else 0)
+    #     self.constant_term = diff.T @ self.Q_bar @ diff
+
+    #     def objective(z, x0_mpc, H, F, F_ref=None, const_term=0):
+    #         # Quadratic form
+    #         quad = 0.5 * z.T @ (H @ z)
+    #         # Linear terms
+    #         if F_ref is not None:
+    #             # (F x_0 - F_ref)^T u
+    #             linear = ( (F @ x0_mpc)[:, np.newaxis] - F_ref ).T @ z
+    #         else:
+    #             # If no ref, linear = (F x_0)^T u
+    #             linear = (F @ x0_mpc).T @ z
+
+    #         return quad + linear + const_term
+
+    #     if self.constr_flag:
+    #         def constraint(z, G, W, S, x0_mpc):
+    #             W_flat = W.flatten()
+    #             return (W_flat + S @ x0_mpc) - G @ z
+    #         cons = {'type': 'ineq', 'fun': constraint, 'args': (self.G, self.W, self.S, x0_mpc)}
+    #     else:
+    #         cons = None
+
+    #     z0 = np.zeros(self.m * self.N)
+    #     options_dict = {
+    #         'ftol': 1e-12,
+    #         'eps': 1e-12,
+    #         'maxiter': 1000,
+    #         'disp': True
+    #     }
+
+    #     result = minimize(
+    #         fun=objective,
+    #         x0=z0,
+    #         args=(x0_mpc, self.H, self.F, self.F_ref, self.constant_term),
+    #         method='SLSQP',
+    #         constraints=cons,
+    #         options=options_dict
+    #     )
+
+    #     z_star = result.x
+    #     return z_star
     
     def getCostMatrices(self):
         return self.Q,self.R
